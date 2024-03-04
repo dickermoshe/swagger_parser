@@ -336,23 +336,29 @@ class OpenApiParser {
             final isRequired =
                 requestBody[_requiredConst]?.toString().toBool() ??
                     config.requiredByDefault;
-            final typeWithImport = _findType(
+            var typeWithImport = _findType(
               contentType[_schemaConst] as Map<String, dynamic>,
               isRequired: isRequired,
+            );
+
+            // Save the name of the type before we convert it to PascalCase
+            final originalTypeName = typeWithImport.type.type;
+
+            // Convert the type to PascalCase
+            typeWithImport = (
+              type: typeWithImport.type
+                  .copyWith(type: typeWithImport.type.type.toPascal),
+              import: typeWithImport.import?.toPascal
             );
 
             final type = typeWithImport.type.type;
 
             _skipDataClasses.add(type);
-            print(typeWithImport.type.name);
-            print(type);
 
             final components = _definitionFileContent[_componentsConst]
                 as Map<String, dynamic>;
             final schemes = components[_schemasConst] as Map<String, dynamic>;
-            print(schemes.keys.toList().toString());
-            print('\n');
-            final dataClass = schemes[type] as Map<String, dynamic>;
+            final dataClass = schemes[originalTypeName] as Map<String, dynamic>;
             final props = dataClass[_propertiesConst] as Map<String, dynamic>;
             final required = dataClass[_requiredConst] as List<dynamic>?;
 
@@ -622,6 +628,7 @@ class OpenApiParser {
           }
         }
 
+        // Handle duplicate named parameters
         final protectedParameters = <UniversalRequestType>[];
         final groupedParameters = groupBy(parameters, (e) => e.type.name);
         for (final entry in groupedParameters.values) {
@@ -1180,14 +1187,13 @@ class OpenApiParser {
       String? import;
       String type;
       if (map.containsKey(_refConst)) {
-        import = _formatRef(map).toPascal;
+        import = _formatRef(map);
       } else if (map.containsKey(_additionalPropertiesConst) &&
           map[_additionalPropertiesConst] is Map<String, dynamic> &&
           (map[_additionalPropertiesConst] as Map<String, dynamic>)
               .containsKey(_refConst)) {
         import =
-            _formatRef(map[_additionalPropertiesConst] as Map<String, dynamic>)
-                .toPascal;
+            _formatRef(map[_additionalPropertiesConst] as Map<String, dynamic>);
       }
 
       if (map.containsKey(_typeConst)) {
