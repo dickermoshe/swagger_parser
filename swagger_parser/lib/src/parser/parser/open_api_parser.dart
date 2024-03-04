@@ -344,10 +344,14 @@ class OpenApiParser {
             final type = typeWithImport.type.type;
 
             _skipDataClasses.add(type);
+            print(typeWithImport.type.name);
+            print(type);
 
             final components = _definitionFileContent[_componentsConst]
                 as Map<String, dynamic>;
             final schemes = components[_schemasConst] as Map<String, dynamic>;
+            print(schemes.keys.toList().toString());
+            print('\n');
             final dataClass = schemes[type] as Map<String, dynamic>;
             final props = dataClass[_propertiesConst] as Map<String, dynamic>;
             final required = dataClass[_requiredConst] as List<dynamic>?;
@@ -1133,11 +1137,9 @@ class OpenApiParser {
             }
           }
         }
-        ofType = ofType?.copyWith(name: name?.toPascal);
       }
 
       final type = ofType?.type ?? _objectConst;
-
       final import = ofImport;
       final defaultValue = map[_defaultConst]?.toString();
 
@@ -1200,7 +1202,6 @@ class OpenApiParser {
           import = replacementRule.apply(import);
           type = replacementRule.apply(type)!;
         }
-        type = type.toPascal;
       }
 
       final defaultValue = map[_defaultConst]?.toString();
