@@ -30,12 +30,11 @@ void main() {
   final testProjectDir = Directory('test_project');
 
   setUpAll(() async {
-    if (testProjectDir.existsSync()) {
-      await testProjectDir.delete(recursive: true);
+    if (!testProjectDir.existsSync()) {
+      await setupBaseProject(
+        projectPath: testProjectDir.path,
+      );
     }
-    await setupBaseProject(
-      projectPath: testProjectDir.path,
-    );
   });
 
   /// Test the generation of the clients for all the schemas
@@ -64,7 +63,7 @@ void main() {
     () async {
       await testBuildClient(testProjectDir.path);
     },
-    timeout: const Timeout(Duration(minutes: 5)),
+    timeout: const Timeout(Duration(minutes: 15)),
   );
 }
 

@@ -179,12 +179,21 @@ final _nameRegExp = RegExp(r'^[a-zA-Z_][a-zA-Z\d_]*$');
 
 /// Protect name from incorrect symbols, keywords, etc.
 (String? newName, String? description) protectName(
-  String? name, {
+  String? initialName, {
   String? description,
   bool uniqueIfNull = false,
   bool isEnum = false,
   bool isMethod = false,
 }) {
+  // It's quite common for lists to have a valid name with '[]' at the end
+  // so we remove it to check if the name is valid
+  final String? name;
+  if (initialName != null && initialName.endsWith('[]')) {
+    name = initialName.substring(0, initialName.length - 2);
+  } else {
+    name = initialName;
+  }
+
   final (newName, error) = switch (name) {
     null || '' => uniqueIfNull
         ? (

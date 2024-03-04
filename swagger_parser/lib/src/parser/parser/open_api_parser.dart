@@ -336,19 +336,9 @@ class OpenApiParser {
             final isRequired =
                 requestBody[_requiredConst]?.toString().toBool() ??
                     config.requiredByDefault;
-            var typeWithImport = _findType(
+            final typeWithImport = _findType(
               contentType[_schemaConst] as Map<String, dynamic>,
               isRequired: isRequired,
-            );
-
-            // Save the name of the type before we convert it to PascalCase
-            final originalTypeName = typeWithImport.type.type;
-
-            // Convert the type to PascalCase
-            typeWithImport = (
-              type: typeWithImport.type
-                  .copyWith(type: typeWithImport.type.type.toPascal),
-              import: typeWithImport.import?.toPascal
             );
 
             final type = typeWithImport.type.type;
@@ -358,7 +348,8 @@ class OpenApiParser {
             final components = _definitionFileContent[_componentsConst]
                 as Map<String, dynamic>;
             final schemes = components[_schemasConst] as Map<String, dynamic>;
-            final dataClass = schemes[originalTypeName] as Map<String, dynamic>;
+            final dataClass =
+                schemes[typeWithImport.componentName] as Map<String, dynamic>;
             final props = dataClass[_propertiesConst] as Map<String, dynamic>;
             final required = dataClass[_requiredConst] as List<dynamic>?;
 
@@ -385,15 +376,22 @@ class OpenApiParser {
             if (typeWithImport.import != null) {
               imports.add(typeWithImport.import!);
             }
+
+            final (protectedName, renameDescription) = protectName(e.key);
+            final decscription = (currentType.description == null &&
+                    renameDescription == null)
+                ? null
+                : (currentType.description ?? '') + (renameDescription ?? '');
+
             types.add(
               UniversalRequestType(
                 parameterType: HttpParameterType.part,
-                name: e.key,
+                name: protectedName,
                 description: currentType.description,
                 type: UniversalType(
                   type: currentType.type,
-                  name: e.key,
-                  description: currentType.description,
+                  name: protectedName,
+                  description: decscription,
                   format: currentType.format,
                   defaultValue: currentType.defaultValue,
                   isRequired: currentType.isRequired,
@@ -934,7 +932,7 @@ class OpenApiParser {
       );
 
   /// Find type of map
-  ({UniversalType type, String? import}) _findType(
+  ({UniversalType type, String? import, String? componentName}) _findType(
     Map<String, dynamic> map, {
     required bool isRequired,
     bool root = true,
@@ -971,6 +969,7 @@ class OpenApiParser {
             ..insert(0, UniversalCollections.list),
         ),
         import: arrayType.import,
+        componentName: arrayType.type.type
       );
     }
     // Map
@@ -1006,6 +1005,7 @@ class OpenApiParser {
             ..insert(0, UniversalCollections.map),
         ),
         import: arrayType.import,
+        componentName: arrayType.type.type
       );
     }
     // Enum
@@ -1053,6 +1053,7 @@ class OpenApiParser {
           enumType: map[_typeConst]?.toString(),
         ),
         import: enumClass.name,
+        componentName: newName.toPascal
       );
     }
     //  Object or additionalProperties
@@ -1103,6 +1104,7 @@ class OpenApiParser {
           isRequired: isRequired,
         ),
         import: newName.toPascal,
+        componentName: newName.toPascal
       );
     }
     // Type in allOf, anyOf or oneOf
@@ -1111,6 +1113,7 @@ class OpenApiParser {
         map.containsKey(_oneOfConst)) {
       String? ofImport;
       UniversalType? ofType;
+      String? componentName;
 
       final of = map[_allOfConst] ?? map[_anyOfConst] ?? map[_oneOfConst];
       if (of is List<dynamic>) {
@@ -1118,7 +1121,8 @@ class OpenApiParser {
         if (of.length == 1) {
           final item = of[0];
           if (item is Map<String, dynamic>) {
-            (import: ofImport, type: ofType) = _findType(
+            (import: ofImport, type: ofType, componentName: componentName) =
+                _findType(
               item,
               isRequired: config.requiredByDefault,
             );
@@ -1144,6 +1148,7 @@ class OpenApiParser {
             }
           }
         }
+        ofType = ofType?.copyWith(name: name?.toPascal);
       }
 
       final type = ofType?.type ?? _objectConst;
@@ -1180,6 +1185,7 @@ class OpenApiParser {
               (ofType?.nullable ?? false),
         ),
         import: import,
+        componentName: type
       );
     }
     // Type or ref
@@ -1233,6 +1239,7 @@ class OpenApiParser {
                   !config.requiredByDefault),
         ),
         import: import,
+        componentName: type
       );
     }
   }
